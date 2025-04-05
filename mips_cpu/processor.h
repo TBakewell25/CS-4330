@@ -205,6 +205,21 @@ class Processor{
 			DEBUG(cout << "JUMP TARGET: PC=0x" << hex << processor_pc << dec << endl);
 		}	
 	}
+
+private:
+    bool branch_prediction_enabled;
+    static const int BP_SIZE = 128;  // Size of branch predictor table
+    int branch_predictor[BP_SIZE];   // One-bit predictor table (0 = not taken, 1 = taken)
+public:
+    // Enable branch predictor and initialize the table
+    void enableBranchPrediction();
+
+    // Look up branch prediction for the given PC (returns true if predicted taken)
+    bool lookup_branch_prediction(uint32_t pc);
+
+    // Update the branch predictor with the actual outcome (taken or not taken)
+    void update_branch_prediction(uint32_t pc, bool taken);
+
 	public:
 		Processor(Memory *mem){ regfile.pc = 0; memory = mem;}
 

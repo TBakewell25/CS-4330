@@ -12,7 +12,7 @@ OBJS := $(SRCS:.cpp=.o)
 all: $(EXE_NAME)
 
 $(EXE_NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^;
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 processor.o: regfile.h ALU.h control.h processor.h
 memory.o: memory.h
