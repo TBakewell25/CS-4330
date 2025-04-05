@@ -2,6 +2,7 @@
 #include <iostream>
 #include "processor.h"
 #include "control.h"
+#include <cstring> 
 using namespace std;
 
 #ifdef ENABLE_DEBUG
@@ -9,6 +10,7 @@ using namespace std;
 #else
 #define DEBUG(x) 
 #endif
+
 
 void Processor::initialize(int level) {
 	processor_pc = 0;
@@ -77,6 +79,38 @@ void Processor::initialize(int level) {
 	//Initialize prevState to same values
 	prevState = state;
 	//Optimization level-specific initialization
+}
+
+void Processor::flush_pipeline() {
+    memset(&state.fetchDecode, 0, sizeof(state.fetchDecode));
+    memset(&state.decExe, 0, sizeof(state.decExe));
+    memset(&state.exeMem, 0, sizeof(state.exeMem));
+    memset(&state.memWrite, 0, sizeof(state.memWrite));
+}
+
+void Processor::enableBranchPrediction() {
+    branch_prediction_enabled = true;
+    for (int i = 0; i < BP_SIZE; i++) {
+        branch_predictor[i] = 1; // Initialize to weakly not taken (state 1)
+    }
+}
+
+bool Processor::lookup_branch_prediction(uint32_t pc) {
+    int index = (pc >> 2) % BP_SIZE; // Use lower bits of PC to index into the table
+    return (branch_predictor[index] >= 2);  // Predict taken if counter is 2 or 3
+}
+
+void Processor::update_branch_prediction(uint32_t pc, bool taken) {
+    int index = (pc >> 2) % BP_SIZE;
+    if (taken) {
+        if (branch_predictor[index] < 3) {
+            branch_predictor[index]++;
+        }
+    } else {
+        if (branch_predictor[index] > 0) {
+            branch_predictor[index]--;
+        }
+    }
 }
 
 void Processor::advance() {
@@ -380,6 +414,31 @@ void Processor::pipelined_execute(){
 	uint32_t alu_zero = 0;
 
 	state.exeMem.alu_result = alu.execute(operand_1, operand_2, alu_zero);
+
+	if (branch_prediction_enabled && prevState.decExe.control.branch) {
+		// Determine the actual branch outcome:
+		bool actual_taken = false;
+		if (!prevState.decExe.control.bne) {  // BEQ instruction
+			actual_taken = (alu_zero == 1);
+		} else {  // BNE instruction
+			actual_taken = (alu_zero == 0);
+		}
+		
+		// Update the branch predictor with the actual outcome
+		update_branch_prediction(prevState.decExe.pc, actual_taken);
+		
+		// Lookup the predicted outcome
+		bool predicted_taken = lookup_branch_prediction(prevState.decExe.pc);
+		if (predicted_taken != actual_taken) {
+			DEBUG(cout << "Branch misprediction at PC: 0x" << std::hex << prevState.decExe.pc << std::dec << "\n");
+			// Flush the pipeline on misprediction
+			flush_pipeline();
+			// Compute branch target: assume branch target = PC + (imm << 2)
+			// (Make sure 'imm' is the sign/zero-extended immediate from decode stage)
+			uint32_t branch_target = prevState.decExe.pc + (imm << 2);
+			processor_pc = branch_target;
+		}
+	}
 
 
 	//logic to take care of updating values read from register in case of forwarding
