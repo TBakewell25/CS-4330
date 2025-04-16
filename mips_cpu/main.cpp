@@ -76,7 +76,7 @@ void print_help()
             "--help                               Print this help message\n"
             "-O0                                  Optimization Level 0 (single-cycle processor)\n"
             "-O1                                  Optimization Level 1 (pipelined processor)\n"
-            "-O2                                  Optimization Level 2 (custom optimization TBD; includes O1)\n"
+            "-O2                                  Optimization Level 2 (branch predictor)\n"
             "-O3                                  Optimization Level 3 (custom optimization TBD; includes O2)\n"
             "-O4                                  Optimization Level 4 (custom optimization TBD; includes O3)\n"
             "                                     Defaults to -O0\n";
@@ -123,12 +123,21 @@ int main(int argc, char *argv[]) {
               break;
           case '0':
           case '1':
-          case '2':
-          case '3':
           case '4':
-              optLevel = c-'0';
+              optLevel = c - '0';
               processor.initialize(optLevel);
-              initialized = 1;
+              initialized = true;
+              break;
+          case '2':
+              optLevel = 2;
+              processor.enableBranchPrediction();
+              processor.initialize(optLevel);
+              initialized = true;
+              break;
+          case '3':
+              optLevel = 3;
+              processor.initialize(optLevel);
+              initialized = true;
               break;
       }
     }
@@ -142,6 +151,15 @@ int main(int argc, char *argv[]) {
         processor.printRegFile();
         num_cycles++;
     }
+
+    int drain_cycles = 0;
+    for (int i = 0; i < drain_cycles; i++) {
+        processor.advance();
+        cout << "\nCYCLE " << num_cycles << "\n";
+        processor.printRegFile();
+        num_cycles++;
+    }
+
 
     cout << "\nCompleted execution in " << (double)num_cycles*(optLevel ? 1 : 125)*0.5 << " nanoseconds.\n";
 }

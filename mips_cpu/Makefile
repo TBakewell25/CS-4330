@@ -1,4 +1,3 @@
-
 CXX = g++
 CXXFLAGS= -g -Wall -std=c++11 #-DENABLE_DEBUG
 OPTFLAGS= -O3
@@ -12,7 +11,7 @@ OBJS := $(SRCS:.cpp=.o)
 all: $(EXE_NAME)
 
 $(EXE_NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^;
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 processor.o: regfile.h ALU.h control.h processor.h
 memory.o: memory.h
@@ -20,5 +19,3 @@ main.o: memory.h processor.h
 
 clean:
 	$(RM) $(EXE_NAME) $(OBJS)
-
-
