@@ -454,11 +454,13 @@ void Processor::pipelined_mem(){
 	
 	//Memory
 	//First read no matter whether it is a load or a store
+        /*
 	bool cache_access_successful = memory->access(prevState.exeMem.alu_result, read_data_mem, 0, ctrl.mem_read | ctrl.mem_write, 0);
 	if (!cache_access_successful) {
 		cache_penalty_mem = 1;  
 		return;  
 	}
+*/
 	//while(!memory->access(prevState.exeMem.alu_result, read_data_mem, 0, ctrl.mem_read | ctrl.mem_write, 0)){}
 
 	

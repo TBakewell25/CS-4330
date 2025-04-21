@@ -18,7 +18,8 @@ def read_last_line(filepath):
 	if not lines:
 		return "File has no content"
 		
-	return lines[-35].strip()
+	return lines[-37].strip()
+
 
 def process_log_files(log_dir="./logs"):
 	"""
