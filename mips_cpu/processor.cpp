@@ -74,6 +74,10 @@ void Processor::initialize(int level) {
 		.pc = 0
 	};
 
+        if (opt_level == 2)
+            enableBranchPrediction();
+        
+
 	//Initialize prevState to same values
 	prevState = state;
 	//Optimization level-specific initialization
@@ -85,7 +89,8 @@ void Processor::advance() {
 				break;
 		case 1: pipelined_processor_advance();
 				break;
-		//other optimization levels go here
+                case 2: pipelined_processor_advance();
+                                break;
 		default: break;
 	}
 }
@@ -186,13 +191,23 @@ void Processor::pipelined_fetch(){
 			return;
 		}
 	}
-	//while(!memory->access(regfile.pc, state.fetchDecode.instruction, 0, 1, 0)){}
-	
+
 	bool cache_access_successful = memory->access(processor_pc, state.fetchDecode.instruction, 0, 1, 0);
 	if (!cache_access_successful) {
 		cache_penalty_fetch = 1;  // Set stall for 60 cycles
 		return;  // Exit the stage, preventing further processing
-	}	
+	}
+
+	int opcode = (state.fetchDecode.instruction >> 26) & 0x3f;
+
+        if (branch_prediction_enabled && (opcode == 0x4 || opcode == 0x5)) { //branch
+            	branch_entry prediction = lookup_branch_prediction(state.fetchDecode.instruction);
+
+                if (prediction.address != NULL) {
+                    if (prediction.taken >= 2)  //taken
+                        processor_pc = prediction.address;
+                } 
+        }
 
 	DEBUG(cout << "\nPC: 0x" << std::hex << regfile.pc << std::dec << "\n");
 	
@@ -202,19 +217,14 @@ void Processor::pipelined_fetch(){
 }
 
 void Processor::pipelined_decode(){
-/*	if (stall){  //this is the same as the stall detector below, but this one actually terminates the stall for next cycle
-		stall = false;
-		state.fetchDecode = prevState.fetchDecode;
-		clear_ID_EX();
-		return;
-	}
-*/
 	if (cache_penalty_mem){
 		state.fetchDecode = prevState.fetchDecode;
 		clear_ID_EX(); //flush state.decExe if hazard detected
 
 		return;
 	}
+
+        state.decExe.instruction = prevState.fetchDecode.instruction;
 	
 	//decode into contol signals (see below)
 	uint32_t instruction = prevState.fetchDecode.instruction;
