@@ -74,7 +74,7 @@ void Processor::initialize(int level) {
 		.pc = 0
 	};
 
-        if (opt_level == 2)
+        if (level == 2)
             enableBranchPrediction();
         
 
@@ -201,19 +201,24 @@ void Processor::pipelined_fetch(){
 	int opcode = (state.fetchDecode.instruction >> 26) & 0x3f;
 
         if (branch_prediction_enabled && (opcode == 0x4 || opcode == 0x5)) { //branch
-            	branch_entry prediction = lookup_branch_prediction(state.fetchDecode.instruction);
+            	branch_entry prediction = lookup_branch_prediction(processor_pc);
 
                 if (prediction.address != NULL) {
-                    if (prediction.taken >= 2)  //taken
+                    if (prediction.taken >= 2){ //taken
+                        state.fetchDecode.pc = processor_pc;
                         processor_pc = prediction.address;
+                        return;
+                    }
+
                 } 
-        }
+       } 
 
 	DEBUG(cout << "\nPC: 0x" << std::hex << regfile.pc << std::dec << "\n");
 	
 	//increment pc
 	state.fetchDecode.pc = processor_pc;
 	processor_pc += 4; //standard increment
+	//issue, double adjusts if branch is predicted taken
 }
 
 void Processor::pipelined_decode(){

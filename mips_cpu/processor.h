@@ -202,28 +202,38 @@ class Processor{
 		    // BNE (Branch if Not Equal)
 		    branch_taken = (state.exeMem.alu_zero == 0);
 		}
+
+                if (branch_taken && !branch_prediction_enabled) {
+                     clear_IF_ID();
+                     clear_ID_EX();
+                     processor_pc = state.exeMem.pc + 4 + (state.exeMem.imm << 2);
+                 }
+	
+                if (branch_prediction_enabled) {	
+			// Calculate actual branch target
+			uint32_t actual_target = branch_taken ? 
+			    state.exeMem.pc + 4 + (state.exeMem.imm << 2) : 
+			    state.exeMem.pc + 4;
+			    
+			// Get the branch instruction address
+			uint32_t branch_instr_addr = state.exeMem.pc;
 		
-		// Calculate actual branch target
-		uint32_t actual_target = branch_taken ? 
-		    state.exeMem.pc + 4 + (state.exeMem.imm << 2) : 
-		    state.exeMem.pc + 4;
-		    
-		// Get the branch instruction address
-		uint32_t branch_instr_addr = state.exeMem.pc;
-		
-		// Update the branch predictor with actual outcome
-		update_branch_prediction(branch_instr_addr, branch_taken, actual_target);
-		
-		// Check if our prediction was wrong
-		branch_entry predicted = lookup_branch_prediction(branch_instr_addr);
-		bool was_predicted_taken = (predicted.taken >= 2);
-		
-		// If prediction was wrong, we need to flush and redirect
-		if (was_predicted_taken != branch_taken) {
-		    clear_IF_ID();
-		    clear_ID_EX();
-		    processor_pc = actual_target;
-		}
+                        branch_entry predicted = lookup_branch_prediction(branch_instr_addr);
+			bool was_predicted_taken = (predicted.taken >= 2);
+			
+			// If prediction was wrong, we need to flush and redirect
+			if (was_predicted_taken != branch_taken) {
+			    clear_IF_ID();
+			    clear_ID_EX();
+			    processor_pc = actual_target;
+			}	
+			// Update the branch predictor with actual outcome
+			update_branch_prediction(branch_instr_addr, branch_taken, actual_target);
+	//NOTE: need to fix order, currently updates before checking prediction		
+			// Check if our prediction was wrong
+			
+                 }
+                 
 	    }
 
 	    if (control.jump){
